@@ -38,6 +38,9 @@ export default function Home() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filterJenis, setFilterJenis] = useState("ALL");
+  const [filterPeriode, setFilterPeriode] = useState("ALL");
+  const [filterTanggal, setFilterTanggal] = useState("");
+  const [filterBulan, setFilterBulan] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -107,9 +110,16 @@ export default function Home() {
 
   const filtered = useMemo(() => {
     const q=search.toLowerCase();
-    return transactions.filter(t => (filterJenis==="ALL" || t.jenis===filterJenis) &&
-      (!q || [t.id,t.deskripsi,t.kategori,t.sumberDana,t.tujuanDana,t.pihakTerkait].join(" ").toLowerCase().includes(q)));
-  }, [transactions,search,filterJenis]);
+    return transactions.filter(t => {
+      const matchesJenis = filterJenis === "ALL" || t.jenis === filterJenis;
+      const matchesPeriode =
+        filterPeriode === "ALL" ||
+        (filterPeriode === "TANGGAL" && t.tanggal === filterTanggal) ||
+        (filterPeriode === "BULAN" && t.tanggal.slice(0, 7) === filterBulan);
+      return matchesJenis && matchesPeriode &&
+        (!q || [t.id,t.deskripsi,t.kategori,t.sumberDana,t.tujuanDana,t.pihakTerkait].join(" ").toLowerCase().includes(q));
+    });
+  }, [transactions,search,filterJenis,filterPeriode,filterTanggal,filterBulan]);
 
   function openAdd() { setEditingId(null); setForm(emptyForm); setError(""); setShowForm(true); }
   function openEdit(tx: Tx) {
@@ -189,7 +199,16 @@ export default function Home() {
 
     <section className="panel">
       <div className="panel-head"><div><h2>Riwayat Transaksi</h2><p>{isAdmin ? "Mode pengurus: data dan aksi lengkap." : "Ringkasan transaksi untuk transparansi publik."}</p></div>
-        <div className="filters"><input placeholder="Cari transaksi..." value={search} onChange={e=>setSearch(e.target.value)} /><select value={filterJenis} onChange={e=>setFilterJenis(e.target.value)}><option value="ALL">Semua jenis</option><option value="PEMASUKAN">Pemasukan</option><option value="PENGELUARAN">Pengeluaran</option><option value="TRANSFER">Transfer</option></select><button className="secondary" onClick={loadTransactions}>Refresh</button></div>
+        <div className="filters">
+          <input placeholder="Cari transaksi..." value={search} onChange={e=>setSearch(e.target.value)} />
+          <select value={filterJenis} onChange={e=>setFilterJenis(e.target.value)}><option value="ALL">Semua jenis</option><option value="PEMASUKAN">Pemasukan</option><option value="PENGELUARAN">Pengeluaran</option><option value="TRANSFER">Transfer</option></select>
+          <select value={filterPeriode} onChange={e=>{setFilterPeriode(e.target.value);setFilterTanggal("");setFilterBulan("");}}>
+            <option value="ALL">Semua tanggal</option><option value="TANGGAL">Tanggal tertentu</option><option value="BULAN">Bulan tertentu</option>
+          </select>
+          {filterPeriode==="TANGGAL"&&<input type="date" value={filterTanggal} onChange={e=>setFilterTanggal(e.target.value)} />}
+          {filterPeriode==="BULAN"&&<input type="month" value={filterBulan} onChange={e=>setFilterBulan(e.target.value)} />}
+          <button className="secondary" onClick={loadTransactions}>Refresh</button>
+        </div>
       </div>
       <div className="table-wrap">{loading?<div className="empty">Memuat data...</div>:filtered.length===0?<div className="empty">Belum ada transaksi yang cocok.</div>:
         <table><thead><tr><th>Tanggal</th><th>Jenis</th><th>Deskripsi</th><th>Kategori</th><th>{isAdmin?"Sumber Dana":"Nominal"}</th><th>{isAdmin?"Nominal":"Status"}</th>{isAdmin&&<th>Aksi</th>}</tr></thead>
