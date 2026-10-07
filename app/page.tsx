@@ -161,7 +161,7 @@ export default function Home() {
   return <main className="app-shell">
     <header className="topbar">
       <div><p className="eyebrow">MUSHOLA FINANCIAL</p><h1>Transparansi Keuangan Mushola</h1><p className="subtitle">Informasi pemasukan, pengeluaran, dan kondisi kas secara terbuka.</p></div>
-      <div className="top-actions">
+      <div className="top-actions"><a className="secondary download-btn" href="/api/export/excel">↓ Download Excel</a>
         {isAdmin ? <><button className="secondary" onClick={logout}>Keluar</button><button className="primary" onClick={openAdd}>+ Tambah Transaksi</button></> : <button className="secondary" onClick={()=>{setLoginError("");setShowLogin(true)}}>🔐 Login Pengurus</button>}
       </div>
     </header>
