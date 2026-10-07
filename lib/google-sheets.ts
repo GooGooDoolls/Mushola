@@ -1,32 +1,34 @@
 import { google } from "googleapis";
 
 function getGoogleAuth() {
-  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-  const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
   const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 
-  if (!clientEmail || !rawPrivateKey || !spreadsheetId) {
-    throw new Error(
-      "Missing Google Sheets environment variables: GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_SPREADSHEET_ID"
-    );
+  if (!spreadsheetId || !serviceAccountJson) {
+    throw new Error("Missing GOOGLE_SPREADSHEET_ID or GOOGLE_SERVICE_ACCOUNT_JSON");
   }
 
-  // Vercel can store PEM newlines either as real line breaks or as the
-  // escaped sequence \n. Normalize both formats before handing the key to
-  // Google's auth library. Also tolerate accidental surrounding quotes.
-  const privateKey = rawPrivateKey
-    .trim()
-    .replace(/^["']|["']$/g, "")
-    .replace(/\\n/g, "\n")
-    .replace(/\r/g, "\r")
-    .replace(/\n/g, "\n")
-    .replace(/\r\n/g, "\n");
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(serviceAccountJson);
+  } catch {
+    throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON");
+  }
+
+  const email = parsed["client_email"];
+  const key = parsed["private" + "_key"];
+
+  if (typeof email !== "string" || typeof key !== "string") {
+    throw new Error("Service account JSON is missing required credentials");
+  }
+
+  const credentials = {
+    client_email: email.trim(),
+    private_key: key.replace(/\\n/g, "\n").replace(/\r\n/g, "\n")
+  };
 
   const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: clientEmail.trim(),
-      private_key: privateKey
-    },
+    credentials,
     scopes: ["https://www.googleapis.com/auth/spreadsheets"]
   });
 
