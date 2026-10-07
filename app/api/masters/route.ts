@@ -21,14 +21,16 @@ function extractValues(rows: string[][], preferred: string[]) {
 
 export async function GET() {
   try {
-    const [kategoriRows, sumberDanaRows] = await Promise.all([
+    const [kategoriRows, sumberDanaRows, transaksiRows] = await Promise.all([
       readSheet("05_MASTER_KATEGORI"),
-      readSheet("06_SUMBER_DANA")
+      readSheet("06_SUMBER_DANA"),
+      readSheet("01_TRANSAKSI_UANG")
     ]);
     return NextResponse.json({
       success: true,
       kategori: extractValues(kategoriRows, ["KATEGORI", "NAMA_KATEGORI", "NAMA"]),
-      sumberDana: extractValues(sumberDanaRows, ["SUMBER_DANA", "NAMA_SUMBER_DANA", "NAMA"])
+      sumberDana: extractValues(sumberDanaRows, ["SUMBER_DANA", "NAMA_SUMBER_DANA", "NAMA"]),
+      pic: extractValues(transaksiRows, ["PIC_PENCATAT", "PIC", "NAMA_PIC", "NAMA"])
     });
   } catch (error) {
     console.error("GET /api/masters failed", error);
