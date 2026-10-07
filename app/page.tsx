@@ -108,6 +108,34 @@ export default function Home() {
     return { monthly, category };
   }, [transactions]);
 
+  const balanceBreakdown = useMemo(() => {
+    const balances: Record<string, { balance: number; income: number; expense: number; transferIn: number; transferOut: number }> = {};
+    const ensure = (name: string) => {
+      if (!name) return null;
+      balances[name] ||= { balance: 0, income: 0, expense: 0, transferIn: 0, transferOut: 0 };
+      return balances[name];
+    };
+    for (const t of transactions) {
+      const source = ensure(t.sumberDana);
+      const target = ensure(t.tujuanDana);
+      if (t.jenis === "SALDO_AWAL" && source) {
+        source.balance += t.nominal;
+      } else if (t.jenis === "PEMASUKAN" && source) {
+        source.balance += t.nominal;
+        source.income += t.nominal;
+      } else if (t.jenis === "PENGELUARAN" && source) {
+        source.balance -= t.nominal;
+        source.expense += t.nominal;
+      } else if (t.jenis === "TRANSFER") {
+        if (source) { source.balance -= t.nominal; source.transferOut += t.nominal; }
+        if (target) { target.balance += t.nominal; target.transferIn += t.nominal; }
+      }
+    }
+    return Object.entries(balances)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a,b) => b.balance - a.balance);
+  }, [transactions]);
+
   const filtered = useMemo(() => {
     const q=search.toLowerCase();
     return transactions.filter(t => {
@@ -187,6 +215,17 @@ export default function Home() {
       <div className="card expense"><span>Total Pengeluaran</span><strong>{money(stats.expense)}</strong><small>{transactions.filter(t=>t.jenis==="PENGELUARAN").length} transaksi</small></div>
       <div className="card"><span>Periode Data</span><strong>{transactions.length ? new Date(Math.max(...transactions.map(t=>new Date(t.tanggal||"1970-01-01").getTime()))).toLocaleDateString("id-ID",{month:"long",year:"numeric"}) : "—"}</strong><small>Data transaksi tercatat</small></div>
     </section>
+
+    {isAdmin&&<section className="panel admin-balance-panel">
+      <div className="panel-head"><div><h2>Breakdown Saldo per Sumber Dana</h2><p>Saldo aktual masing-masing kas/rekening berdasarkan transaksi tercatat.</p></div></div>
+      <div className="balance-grid">
+        {balanceBreakdown.length ? balanceBreakdown.map(item=><div className="balance-card" key={item.name}>
+          <div className="balance-card-head"><span>{item.name}</span><strong className={item.balance<0?"negative":""}>{money(item.balance)}</strong></div>
+          <div className="balance-meta"><span>Masuk {money(item.income)}</span><span>Keluar {money(item.expense)}</span></div>
+          {(item.transferIn||item.transferOut)&&<div className="balance-transfer"><span>Transfer masuk +{money(item.transferIn)}</span><span>Transfer keluar −{money(item.transferOut)}</span></div>}
+        </div>) : <div className="empty">Belum ada data saldo.</div>}
+      </div>
+    </section>}
 
     <section className="report-grid">
       <div className="panel report-panel"><div className="panel-head"><div><h2>Ringkasan Bulanan</h2><p>Pemasukan dan pengeluaran per bulan.</p></div></div>
