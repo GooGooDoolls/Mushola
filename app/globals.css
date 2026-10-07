@@ -106,3 +106,4 @@ td.amount { text-align: right; font-weight: 700; }
 
 .download-btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
 .export-modal { width: min(620px, 100%); } .export-hint { margin: 14px 0 0; color: #737983; font-size: 12px; } .download-action { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+.filters { flex-wrap: wrap; } .filters input[type="date"], .filters input[type="month"] { min-width: 145px; }
