@@ -29,6 +29,9 @@ export default function Home() {
   const [deleting, setDeleting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [exportStart, setExportStart] = useState("");
+  const [exportEnd, setExportEnd] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [password, setPassword] = useState("");
@@ -161,7 +164,7 @@ export default function Home() {
   return <main className="app-shell">
     <header className="topbar">
       <div><p className="eyebrow">MUSHOLA FINANCIAL</p><h1>Transparansi Keuangan Mushola</h1><p className="subtitle">Informasi pemasukan, pengeluaran, dan kondisi kas secara terbuka.</p></div>
-      <div className="top-actions"><a className="secondary download-btn" href="/api/export/excel">↓ Download Excel</a>
+      <div className="top-actions"><button className="secondary download-btn" onClick={()=>setShowExport(true)}>↓ Download Excel</button>
         {isAdmin ? <><button className="secondary" onClick={logout}>Keluar</button><button className="primary" onClick={openAdd}>+ Tambah Transaksi</button></> : <button className="secondary" onClick={()=>{setLoginError("");setShowLogin(true)}}>🔐 Login Pengurus</button>}
       </div>
     </header>
@@ -194,6 +197,7 @@ export default function Home() {
       </div>
     </section>
 
+    {showExport&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setShowExport(false)}><div className="modal export-modal"><div className="modal-head"><div><h2>Download Laporan Excel</h2><p>Pilih periode transaksi yang ingin diunduh.</p></div><button type="button" className="icon" onClick={()=>setShowExport(false)}>×</button></div><div className="form-grid"><label>Mulai tanggal<input type="date" value={exportStart} onChange={e=>setExportStart(e.target.value)} /></label><label>Sampai tanggal<input type="date" value={exportEnd} onChange={e=>setExportEnd(e.target.value)} /></label></div><p className="export-hint">Kosongkan kedua tanggal untuk mengunduh seluruh data.</p><div className="modal-actions"><button type="button" className="secondary" onClick={()=>{setExportStart("");setExportEnd("");}}>Semua Data</button><button type="button" className="secondary" onClick={()=>setShowExport(false)}>Batal</button><a className="primary download-action" href={`/api/export/excel?start=${encodeURIComponent(exportStart)}&end=${encodeURIComponent(exportEnd)}`} onClick={()=>setTimeout(()=>setShowExport(false),200)}>Download Excel</a></div></div></div>}
     {showLogin&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setShowLogin(false)}><form className="modal login-modal" onSubmit={login}><div className="modal-head"><div><h2>Login Pengurus</h2><p>Masuk untuk mencatat dan mengelola transaksi.</p></div><button type="button" className="icon" onClick={()=>setShowLogin(false)}>×</button></div>{loginError&&<div className="alert">{loginError}</div>}<label className="login-label">Password<input type="password" autoFocus value={password} onChange={e=>setPassword(e.target.value)} placeholder="Masukkan password" required /></label><div className="modal-actions"><button type="button" className="secondary" onClick={()=>setShowLogin(false)}>Batal</button><button className="primary" disabled={loginLoading}>{loginLoading?"Memeriksa...":"Login"}</button></div></form></div>}
 
     {showForm&&isAdmin&&<div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setShowForm(false)}><form className="modal" onSubmit={submit}><div className="modal-head"><div><h2>{editingId?"Edit Transaksi":"Tambah Transaksi"}</h2><p>Data tersimpan langsung ke Google Sheets.</p></div><button type="button" className="icon" onClick={()=>setShowForm(false)}>×</button></div>
