@@ -107,3 +107,14 @@ td.amount { text-align: right; font-weight: 700; }
 .download-btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
 .export-modal { width: min(620px, 100%); } .export-hint { margin: 14px 0 0; color: #737983; font-size: 12px; } .download-action { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
 .filters { flex-wrap: wrap; } .filters input[type="date"], .filters input[type="month"] { min-width: 145px; }
+.admin-balance-panel { margin-bottom: 20px; }
+.balance-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 18px 20px 20px; }
+.balance-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; background: #fff; }
+.balance-card-head { display: flex; flex-direction: column; gap: 7px; }
+.balance-card-head span { font-size: 12px; color: #6b7280; font-weight: 700; }
+.balance-card-head strong { font-size: 20px; color: #111827; }
+.balance-card-head strong.negative { color: #b42318; }
+.balance-meta, .balance-transfer { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; font-size: 11px; color: #6b7280; }
+.balance-transfer { padding-top: 9px; border-top: 1px solid #f0f1f3; }
+@media (max-width: 1000px) { .balance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 650px) { .balance-grid { grid-template-columns: 1fr; } }
