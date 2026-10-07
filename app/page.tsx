@@ -14,6 +14,8 @@ type Tx = {
   metode: string;
   pihakTerkait: string;
   pic: string;
+  noRef?: string;
+  catatan?: string;
 };
 
 const emptyForm = {
@@ -48,7 +50,9 @@ export default function Home() {
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterJenis, setFilterJenis] = useState("ALL");
   const [form, setForm] = useState(emptyForm);
@@ -76,7 +80,9 @@ export default function Home() {
         tujuanDana: r[index("TUJUAN_DANA")] || r[7] || "",
         metode: r[index("METODE_PEMBAYARAN")] || r[8] || "",
         pihakTerkait: r[index("PIHAK_TERKAIT")] || r[9] || "",
-        pic: r[index("PIC_PENCATAT")] || r[10] || ""
+        pic: r[index("PIC_PENCATAT")] || r[10] || "",
+        noRef: r[index("NO_REF")] || r[11] || "",
+        catatan: r[index("CATATAN")] || r[12] || ""
       }));
       setTransactions(mapped);
     } catch (e) {
@@ -102,23 +108,96 @@ export default function Home() {
     const q = search.toLowerCase();
     return transactions.filter(t =>
       (filterJenis === "ALL" || t.jenis === filterJenis) &&
-      (!q || [t.id, t.deskripsi, t.kategori, t.sumberDana, t.pihakTerkait].join(" ").toLowerCase().includes(q))
+      (!q || [t.id, t.deskripsi, t.kategori, t.sumberDana, t.tujuanDana, t.pihakTerkait]
+        .join(" ").toLowerCase().includes(q))
     );
   }, [transactions, search, filterJenis]);
+
+  function openAdd() {
+    setEditingId(null);
+    setForm(emptyForm);
+    setError("");
+    setShowForm(true);
+  }
+
+  function openEdit(tx: Tx) {
+    setEditingId(tx.id);
+    setForm({
+      tanggal: tx.tanggal,
+      jenis: tx.jenis === "SALDO_AWAL" ? "PEMASUKAN" : tx.jenis,
+      kategori: tx.kategori,
+      deskripsi: tx.deskripsi,
+      nominal: String(tx.nominal),
+      sumberDana: tx.sumberDana,
+      tujuanDana: tx.tujuanDana,
+      metode: tx.metode || "CASH",
+      pihakTerkait: tx.pihakTerkait,
+      pic: tx.pic,
+      noRef: tx.noRef || "",
+      catatan: tx.catatan || ""
+    });
+    setError("");
+    setShowForm(true);
+  }
+
+  async function removeTransaction(id: string) {
+    if (!window.confirm("Hapus transaksi " + id + "? Data akan dihapus dari Google Sheets.")) return;
+    setDeleting(true);
+    setError("");
+    try {
+      const response = await fetch("/api/transactions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || "Gagal menghapus transaksi");
+      await loadTransactions();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal menghapus transaksi");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError("");
+
+    if (Number(form.nominal) <= 0) {
+      setError("Nominal harus lebih besar dari 0.");
+      setSaving(false);
+      return;
+    }
+
+    if (form.jenis === "TRANSFER") {
+      if (!form.tujuanDana.trim()) {
+        setError("Tujuan dana wajib diisi untuk transfer.");
+        setSaving(false);
+        return;
+      }
+      if (form.sumberDana.trim().toLowerCase() === form.tujuanDana.trim().toLowerCase()) {
+        setError("Sumber dan tujuan dana tidak boleh sama.");
+        setSaving(false);
+        return;
+      }
+    } else if (form.tujuanDana.trim()) {
+      setError("Tujuan dana hanya boleh diisi untuk transaksi transfer.");
+      setSaving(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/transactions", {
-        method: "POST",
+        method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify(editingId ? { ...form, id: editingId } : form)
       });
       const data = await response.json();
       if (!data.success) throw new Error(data.error || "Gagal menyimpan transaksi");
       setForm(emptyForm);
+      setEditingId(null);
       setShowForm(false);
       await loadTransactions();
     } catch (e) {
@@ -136,7 +215,7 @@ export default function Home() {
           <h1>Dashboard Keuangan</h1>
           <p className="subtitle">Pencatatan kas dan transaksi mushola.</p>
         </div>
-        <button className="primary" onClick={() => setShowForm(true)}>+ Tambah Transaksi</button>
+        <button className="primary" onClick={openAdd}>+ Tambah Transaksi</button>
       </header>
 
       {error && <div className="alert">{error}</div>}
@@ -170,7 +249,7 @@ export default function Home() {
         <div className="table-wrap">
           {loading ? <div className="empty">Memuat data...</div> : filtered.length === 0 ? <div className="empty">Belum ada transaksi yang cocok.</div> : (
             <table>
-              <thead><tr><th>ID</th><th>Tanggal</th><th>Jenis</th><th>Deskripsi</th><th>Kategori</th><th>Sumber Dana</th><th>Nominal</th></tr></thead>
+              <thead><tr><th>ID</th><th>Tanggal</th><th>Jenis</th><th>Deskripsi</th><th>Kategori</th><th>Sumber Dana</th><th>Nominal</th><th>Aksi</th></tr></thead>
               <tbody>
                 {filtered.slice().reverse().map(t => (
                   <tr key={t.id + t.tanggal}>
@@ -181,6 +260,12 @@ export default function Home() {
                     <td>{t.kategori || "-"}</td>
                     <td>{t.sumberDana || "-"}</td>
                     <td className="amount">{money(t.nominal)}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="secondary small" onClick={() => openEdit(t)}>Edit</button>
+                        <button className="danger small" disabled={deleting} onClick={() => removeTransaction(t.id)}>Hapus</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -192,22 +277,28 @@ export default function Home() {
       {showForm && (
         <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && setShowForm(false)}>
           <form className="modal" onSubmit={submit}>
-            <div className="modal-head"><div><h2>Tambah Transaksi</h2><p>Data akan masuk ke Google Sheets.</p></div><button type="button" className="icon" onClick={() => setShowForm(false)}>×</button></div>
+            <div className="modal-head">
+              <div><h2>{editingId ? "Edit Transaksi" : "Tambah Transaksi"}</h2><p>Data tersimpan langsung ke Google Sheets.</p></div>
+              <button type="button" className="icon" onClick={() => setShowForm(false)}>×</button>
+            </div>
             <div className="form-grid">
               <label>Tanggal<input type="date" value={form.tanggal} onChange={e => setForm({...form, tanggal:e.target.value})} required /></label>
-              <label>Jenis<select value={form.jenis} onChange={e => setForm({...form, jenis:e.target.value})}><option>PEMASUKAN</option><option>PENGELUARAN</option><option>TRANSFER</option></select></label>
+              <label>Jenis<select value={form.jenis} onChange={e => setForm({...form, jenis:e.target.value, tujuanDana: e.target.value === "TRANSFER" ? form.tujuanDana : ""})}><option>PEMASUKAN</option><option>PENGELUARAN</option><option>TRANSFER</option></select></label>
               <label>Kategori<input value={form.kategori} onChange={e => setForm({...form, kategori:e.target.value})} required /></label>
-              <label>Nominal (Rp)<input type="number" min="0" value={form.nominal} onChange={e => setForm({...form, nominal:e.target.value})} required /></label>
+              <label>Nominal (Rp)<input type="number" min="1" step="1" value={form.nominal} onChange={e => setForm({...form, nominal:e.target.value})} required /></label>
               <label className="full">Deskripsi<input value={form.deskripsi} onChange={e => setForm({...form, deskripsi:e.target.value})} required /></label>
               <label>Sumber Dana<input value={form.sumberDana} onChange={e => setForm({...form, sumberDana:e.target.value})} required /></label>
-              <label>Tujuan Dana<input value={form.tujuanDana} onChange={e => setForm({...form, tujuanDana:e.target.value})} /></label>
+              <label>Tujuan Dana<input value={form.tujuanDana} onChange={e => setForm({...form, tujuanDana:e.target.value})} disabled={form.jenis !== "TRANSFER"} required={form.jenis === "TRANSFER"} placeholder={form.jenis === "TRANSFER" ? "Wajib untuk transfer" : "Khusus transfer"} /></label>
               <label>Metode Pembayaran<select value={form.metode} onChange={e => setForm({...form, metode:e.target.value})}><option>CASH</option><option>TRANSFER</option><option>QRIS</option><option>LAINNYA</option></select></label>
               <label>Pihak Terkait<input value={form.pihakTerkait} onChange={e => setForm({...form, pihakTerkait:e.target.value})} /></label>
               <label>PIC Pencatat<input value={form.pic} onChange={e => setForm({...form, pic:e.target.value})} /></label>
               <label>No. Ref<input value={form.noRef} onChange={e => setForm({...form, noRef:e.target.value})} /></label>
               <label className="full">Catatan<textarea rows={3} value={form.catatan} onChange={e => setForm({...form, catatan:e.target.value})} /></label>
             </div>
-            <div className="modal-actions"><button type="button" className="secondary" onClick={() => setShowForm(false)}>Batal</button><button className="primary" disabled={saving}>{saving ? "Menyimpan..." : "Simpan Transaksi"}</button></div>
+            <div className="modal-actions">
+              <button type="button" className="secondary" onClick={() => setShowForm(false)}>Batal</button>
+              <button className="primary" disabled={saving}>{saving ? "Menyimpan..." : editingId ? "Simpan Perubahan" : "Simpan Transaksi"}</button>
+            </div>
           </form>
         </div>
       )}
