@@ -77,7 +77,7 @@ function rowToObject(row: string[]) {
   };
 }
 
-function getBalances(rows: string[], excludeId?: string) {
+function getBalances(rows: string[][], excludeId?: string) {
   const lines = rows.slice(1);
   const balances: Record<string, number> = {};
 
