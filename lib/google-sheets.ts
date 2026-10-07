@@ -41,7 +41,7 @@ export async function appendTransaction(values: string[]) {
 
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: "01_TRANSAKSI_UANG!A:Z",
+    range: "01_TRANSAKSI_UANG!A:N",
     valueInputOption: "USER_ENTERED",
     insertDataOption: "INSERT_ROWS",
     requestBody: { values: [values] }
@@ -54,8 +54,55 @@ export async function readTransactions() {
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: "01_TRANSAKSI_UANG!A:Z"
+    range: "01_TRANSAKSI_UANG!A:N"
   });
 
   return response.data.values ?? [];
+}
+
+export async function updateTransaction(rowNumber: number, values: string[]) {
+  const { auth, spreadsheetId } = getGoogleAuth();
+  const sheets = google.sheets({ version: "v4", auth });
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `01_TRANSAKSI_UANG!A${rowNumber}:N${rowNumber}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: [values] }
+  });
+}
+
+export async function deleteTransaction(rowNumber: number) {
+  const { auth, spreadsheetId } = getGoogleAuth();
+  const sheets = google.sheets({ version: "v4", auth });
+
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: "sheets.properties"
+  });
+
+  const sheet = meta.data.sheets?.find(
+    s => s.properties?.title === "01_TRANSAKSI_UANG"
+  );
+  const sheetId = sheet?.properties?.sheetId;
+
+  if (sheetId === undefined) {
+    throw new Error("Sheet 01_TRANSAKSI_UANG tidak ditemukan");
+  }
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: "ROWS",
+            startIndex: rowNumber - 1,
+            endIndex: rowNumber
+          }
+        }
+      }]
+    }
+  });
 }
