@@ -57,6 +57,8 @@ export default function Home() {
   const [filterJenis, setFilterJenis] = useState("ALL");
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
+  const [kategoriOptions, setKategoriOptions] = useState<string[]>([]);
+  const [sumberDanaOptions, setSumberDanaOptions] = useState<string[]>([]);
 
   async function loadTransactions() {
     setLoading(true);
@@ -92,7 +94,21 @@ export default function Home() {
     }
   }
 
-  useEffect(() => { loadTransactions(); }, []);
+  async function loadMasters() {
+    try {
+      const response = await fetch("/api/masters", { cache: "no-store" });
+      const data = await response.json();
+      if (data.success) {
+        setKategoriOptions(data.kategori || []);
+        setSumberDanaOptions(data.sumberDana || []);
+      }
+    } catch {}
+  }
+
+  useEffect(() => {
+    loadTransactions();
+    loadMasters();
+  }, []);
 
   const stats = useMemo(() => {
     let income = 0, expense = 0, opening = 0;
@@ -284,11 +300,11 @@ export default function Home() {
             <div className="form-grid">
               <label>Tanggal<input type="date" value={form.tanggal} onChange={e => setForm({...form, tanggal:e.target.value})} required /></label>
               <label>Jenis<select value={form.jenis} onChange={e => setForm({...form, jenis:e.target.value, tujuanDana: e.target.value === "TRANSFER" ? form.tujuanDana : ""})}><option>PEMASUKAN</option><option>PENGELUARAN</option><option>TRANSFER</option></select></label>
-              <label>Kategori<input value={form.kategori} onChange={e => setForm({...form, kategori:e.target.value})} required /></label>
+              <label>Kategori<select value={form.kategori} onChange={e => setForm({...form, kategori:e.target.value})} required><option value="">Pilih kategori</option>{kategoriOptions.map(v => <option key={v} value={v}>{v}</option>)}</select></label>
               <label>Nominal (Rp)<input type="number" min="1" step="1" value={form.nominal} onChange={e => setForm({...form, nominal:e.target.value})} required /></label>
               <label className="full">Deskripsi<input value={form.deskripsi} onChange={e => setForm({...form, deskripsi:e.target.value})} required /></label>
-              <label>Sumber Dana<input value={form.sumberDana} onChange={e => setForm({...form, sumberDana:e.target.value})} required /></label>
-              <label>Tujuan Dana<input value={form.tujuanDana} onChange={e => setForm({...form, tujuanDana:e.target.value})} disabled={form.jenis !== "TRANSFER"} required={form.jenis === "TRANSFER"} placeholder={form.jenis === "TRANSFER" ? "Wajib untuk transfer" : "Khusus transfer"} /></label>
+              <label>Sumber Dana<select value={form.sumberDana} onChange={e => setForm({...form, sumberDana:e.target.value})} required><option value="">Pilih sumber dana</option>{sumberDanaOptions.map(v => <option key={v} value={v}>{v}</option>)}</select></label>
+              <label>Tujuan Dana<select value={form.tujuanDana} onChange={e => setForm({...form, tujuanDana:e.target.value})} disabled={form.jenis !== "TRANSFER"} required={form.jenis === "TRANSFER"}><option value="">{form.jenis === "TRANSFER" ? "Pilih tujuan dana" : "Khusus transfer"}</option>{sumberDanaOptions.map(v => <option key={v} value={v}>{v}</option>)}</select></label>
               <label>Metode Pembayaran<select value={form.metode} onChange={e => setForm({...form, metode:e.target.value})}><option>CASH</option><option>TRANSFER</option><option>QRIS</option><option>LAINNYA</option></select></label>
               <label>Pihak Terkait<input value={form.pihakTerkait} onChange={e => setForm({...form, pihakTerkait:e.target.value})} /></label>
               <label>PIC Pencatat<input value={form.pic} onChange={e => setForm({...form, pic:e.target.value})} /></label>
