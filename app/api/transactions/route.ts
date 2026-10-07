@@ -134,10 +134,23 @@ function findRow(rows: string[][], id: string) {
   return rowIndex === -1 ? null : { rowIndex, rowNumber: rowIndex + 1 };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const rows = await readTransactions();
-    return NextResponse.json({ success: true, sheet: "01_TRANSAKSI_UANG", rows });
+    if (requireAdmin(request)) {
+      return NextResponse.json({ success: true, sheet: "01_TRANSAKSI_UANG", rows });
+    }
+
+    const header = rows[0] || [];
+    const publicColumns = ["TANGGAL", "JENIS_TRANSAKSI", "KATEGORI", "DESKRIPSI", "NOMINAL"];
+    const indexes = publicColumns.map(name => header.indexOf(name)).filter(index => index >= 0);
+    const publicHeader = indexes.map(index => header[index]);
+    const publicRows = rows.slice(1).map(row => indexes.map(index => row[index] || ""));
+    return NextResponse.json({
+      success: true,
+      sheet: "01_TRANSAKSI_UANG",
+      rows: [publicHeader, ...publicRows]
+    });
   } catch (error) {
     console.error("GET /api/transactions failed", error);
     return NextResponse.json(
