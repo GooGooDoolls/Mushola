@@ -58,13 +58,6 @@ export async function readSheet(sheetName: string) {
   return response.data.values ?? [];
 }
 
-export async function readSheet(sheetName: string) {
-  const { auth, spreadsheetId } = getGoogleAuth();
-  const sheets = google.sheets({ version: "v4", auth });
-  const response = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${sheetName}!A:Z` });
-  return response.data.values ?? [];
-}
-
 export async function readTransactions() {
   const { auth, spreadsheetId } = getGoogleAuth();
   const sheets = google.sheets({ version: "v4", auth });
