@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { COOKIE_NAME, SESSION_TTL_MS, createSessionToken, verifyAdminPassword } from "@/lib/auth";
+import { COOKIE_NAME, SESSION_TTL_MS, createSessionToken, isValidSessionToken, verifyAdminPassword } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const token = request.headers.get("cookie")?.split(";").map(v => v.trim()).find(v => v.startsWith(COOKIE_NAME + "="))?.slice(COOKIE_NAME.length + 1);
-  const response = NextResponse.json({ success: true, authenticated: !!token && (() => { try { return require("@/lib/auth").isValidSessionToken(token); } catch { return false; } })() });
+  const authenticated = (() => { try { return isValidSessionToken(token); } catch { return false; } })();
+  const response = NextResponse.json({ success: true, authenticated });
   return response;
 }
 
