@@ -6,7 +6,7 @@ button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 
 .app-shell { min-height: 100vh; max-width: 1440px; margin: 0 auto; padding: 34px 40px 60px; }
-.topbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 28px; }
+.top-actions { display: flex; gap: 8px; align-items: center; }\n.topbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 28px; }
 .eyebrow { margin: 0 0 8px; font-size: 11px; font-weight: 800; letter-spacing: .14em; color: #6b7280; }
 h1 { margin: 0; font-size: clamp(30px, 4vw, 46px); letter-spacing: -.04em; }
 .subtitle { margin: 8px 0 0; color: #6b7280; }
@@ -25,7 +25,7 @@ h1 { margin: 0; font-size: clamp(30px, 4vw, 46px); letter-spacing: -.04em; }
 .card.expense strong { color: #b42318; }
 .card small { font-size: 12px; }
 
-.panel { overflow: hidden; }
+.panel { overflow: hidden; }\n.report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }\n.report-panel { min-width: 0; }\n.report-list { padding: 4px 20px 16px; }\n.report-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 12px; padding: 13px 0; border-bottom: 1px solid #f0f1f3; font-size: 13px; }\n.report-row:last-child { border-bottom: 0; }\n.positive { color: #18794e; font-weight: 700; text-align: right; }\n.negative { color: #b42318; font-weight: 700; text-align: right; }\n.category-row { padding: 12px 0; border-bottom: 1px solid #f0f1f3; }\n.category-row:last-child { border-bottom: 0; }\n.category-label { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }\n.category-label span { font-weight: 700; }\n.bar { height: 7px; background: #eef1f5; border-radius: 99px; overflow: hidden; margin-top: 8px; }\n.bar i { display: block; height: 100%; background: #17181a; border-radius: inherit; }\n.login-modal { width: min(430px, 100%); }\n.login-label { display: flex; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 700; color: #4d535c; }\n.login-label input { width: 100%; border: 1px solid #d9dde3; border-radius: 9px; padding: 11px; margin-top: 2px; }
 .panel-head { display: flex; justify-content: space-between; gap: 20px; align-items: center; padding: 20px 22px; border-bottom: 1px solid #eceef1; }
 .panel-head h2, .modal h2 { margin: 0; font-size: 18px; }
 .panel-head p, .modal-head p { margin: 5px 0 0; color: #7a8089; font-size: 13px; }
@@ -57,7 +57,7 @@ td.amount { text-align: right; font-weight: 700; }
 .full { grid-column: 1 / -1; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
 
-@media (max-width: 900px) {
+@media (max-width: 900px) {\n  .report-grid { grid-template-columns: 1fr; }
   .app-shell { padding: 24px 18px 40px; }
   .topbar, .panel-head { align-items: stretch; flex-direction: column; }
   .stats { grid-template-columns: 1fr 1fr; }
