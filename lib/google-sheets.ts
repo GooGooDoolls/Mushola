@@ -35,6 +35,19 @@ function getGoogleAuth() {
   return { auth, spreadsheetId: spreadsheetId.trim() };
 }
 
+export async function appendTransaction(values: string[]) {
+  const { auth, spreadsheetId } = getGoogleAuth();
+  const sheets = google.sheets({ version: "v4", auth });
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: "01_TRANSAKSI_UANG!A:Z",
+    valueInputOption: "USER_ENTERED",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: { values: [values] }
+  });
+}
+
 export async function readTransactions() {
   const { auth, spreadsheetId } = getGoogleAuth();
   const sheets = google.sheets({ version: "v4", auth });
