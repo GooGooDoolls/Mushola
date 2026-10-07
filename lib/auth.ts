@@ -16,7 +16,9 @@ function sign(value: string, secret: string) {
 
 export function verifyAdminPassword(password: string) {
   const { password: expected } = getConfig();
-  const actual = Buffer.from(password);\n  const target = Buffer.from(expected);\n  return actual.length === target.length && timingSafeEqual(actual, target);
+  const actual = Buffer.from(password);
+  const target = Buffer.from(expected);
+  return actual.length === target.length && timingSafeEqual(actual, target);
 }
 
 export function createSessionToken() {
