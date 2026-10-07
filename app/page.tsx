@@ -46,6 +46,8 @@ export default function Home() {
   const [loginError, setLoginError] = useState("");
   const [kategoriOptions, setKategoriOptions] = useState<string[]>([]);
   const [sumberDanaOptions, setSumberDanaOptions] = useState<string[]>([]);
+  const [picOptions, setPicOptions] = useState<string[]>([]);
+  const [customPic, setCustomPic] = useState("");
 
   async function loadTransactions() {
     setLoading(true); setError("");
@@ -71,7 +73,7 @@ export default function Home() {
   async function loadMasters() {
     try {
       const data = await (await fetch("/api/masters", { cache: "no-store" })).json();
-      if (data.success) { setKategoriOptions(data.kategori || []); setSumberDanaOptions(data.sumberDana || []); }
+      if (data.success) { setKategoriOptions(data.kategori || []); setSumberDanaOptions(data.sumberDana || []); setPicOptions(data.pic || []); }
     } catch {}
   }
 
@@ -111,26 +113,31 @@ export default function Home() {
   const balanceBreakdown = useMemo(() => {
     const balances: Record<string, { balance: number; income: number; expense: number; transferIn: number; transferOut: number }> = {};
     const ensure = (name: string) => {
-      if (!name) return null;
-      balances[name] ||= { balance: 0, income: 0, expense: 0, transferIn: 0, transferOut: 0 };
-      return balances[name];
+      const owner = name.trim();
+      if (!owner) return null;
+      balances[owner] ||= { balance: 0, income: 0, expense: 0, transferIn: 0, transferOut: 0 };
+      return balances[owner];
     };
+
     for (const t of transactions) {
-      const source = ensure(t.sumberDana);
-      const target = ensure(t.tujuanDana);
-      if (t.jenis === "SALDO_AWAL" && source) {
-        source.balance += t.nominal;
-      } else if (t.jenis === "PEMASUKAN" && source) {
-        source.balance += t.nominal;
-        source.income += t.nominal;
-      } else if (t.jenis === "PENGELUARAN" && source) {
-        source.balance -= t.nominal;
-        source.expense += t.nominal;
+      const owner = ensure(t.pic);
+      if (!owner) continue;
+
+      if (t.jenis === "SALDO_AWAL") {
+        owner.balance += t.nominal;
+      } else if (t.jenis === "PEMASUKAN") {
+        owner.balance += t.nominal;
+        owner.income += t.nominal;
+      } else if (t.jenis === "PENGELUARAN") {
+        owner.balance -= t.nominal;
+        owner.expense += t.nominal;
       } else if (t.jenis === "TRANSFER") {
-        if (source) { source.balance -= t.nominal; source.transferOut += t.nominal; }
-        if (target) { target.balance += t.nominal; target.transferIn += t.nominal; }
+        // Transfer antar rekening milik PIC yang sama tidak mengubah saldo orang tersebut.
+        owner.transferIn += t.nominal;
+        owner.transferOut += t.nominal;
       }
     }
+
     return Object.entries(balances)
       .map(([name, data]) => ({ name, ...data }))
       .sort((a,b) => b.balance - a.balance);
@@ -149,9 +156,9 @@ export default function Home() {
     });
   }, [transactions,search,filterJenis,filterPeriode,filterTanggal,filterBulan]);
 
-  function openAdd() { setEditingId(null); setForm(emptyForm); setError(""); setShowForm(true); }
+  function openAdd() { setEditingId(null); setForm(emptyForm); setCustomPic(""); setError(""); setShowForm(true); }
   function openEdit(tx: Tx) {
-    setEditingId(tx.id); setForm({ tanggal:tx.tanggal, jenis:tx.jenis==="SALDO_AWAL"?"PEMASUKAN":tx.jenis, kategori:tx.kategori,
+    setEditingId(tx.id); setCustomPic(picOptions.includes(tx.pic) ? "" : tx.pic); setForm({ tanggal:tx.tanggal, jenis:tx.jenis==="SALDO_AWAL"?"PEMASUKAN":tx.jenis, kategori:tx.kategori,
       deskripsi:tx.deskripsi, nominal:String(tx.nominal), sumberDana:tx.sumberDana, tujuanDana:tx.tujuanDana,
       metode:tx.metode||"CASH", pihakTerkait:tx.pihakTerkait, pic:tx.pic, noRef:tx.noRef||"", catatan:tx.catatan||"" });
     setError(""); setShowForm(true);
@@ -217,7 +224,7 @@ export default function Home() {
     </section>
 
     {isAdmin&&<section className="panel admin-balance-panel">
-      <div className="panel-head"><div><h2>Breakdown Saldo per Sumber Dana</h2><p>Saldo aktual masing-masing kas/rekening berdasarkan transaksi tercatat.</p></div></div>
+      <div className="panel-head"><div><h2>Breakdown Saldo per Pemegang Dana</h2><p>Saldo gabungan berdasarkan PIC/pemegang dana, sehingga beberapa rekening milik orang yang sama digabung.</p></div></div>
       <div className="balance-grid">
         {balanceBreakdown.length ? balanceBreakdown.map(item=><div className="balance-card" key={item.name}>
           <div className="balance-card-head"><span>{item.name}</span><strong className={item.balance<0?"negative":""}>{money(item.balance)}</strong></div>
@@ -263,7 +270,18 @@ export default function Home() {
       <label>Kategori<select value={form.kategori} onChange={e=>setForm({...form,kategori:e.target.value})} required><option value="">Pilih kategori</option>{kategoriOptions.map(v=><option key={v}>{v}</option>)}</select></label><label>Nominal (Rp)<input type="number" min="1" step="1" value={form.nominal} onChange={e=>setForm({...form,nominal:e.target.value})} required /></label>
       <label className="full">Deskripsi<input value={form.deskripsi} onChange={e=>setForm({...form,deskripsi:e.target.value})} required /></label><label>Sumber Dana<select value={form.sumberDana} onChange={e=>setForm({...form,sumberDana:e.target.value})} required><option value="">Pilih sumber dana</option>{sumberDanaOptions.map(v=><option key={v}>{v}</option>)}</select></label>
       <label>Tujuan Dana<select value={form.tujuanDana} onChange={e=>setForm({...form,tujuanDana:e.target.value})} disabled={form.jenis!=="TRANSFER"} required={form.jenis==="TRANSFER"}><option value="">{form.jenis==="TRANSFER"?"Pilih tujuan dana":"Khusus transfer"}</option>{sumberDanaOptions.map(v=><option key={v}>{v}</option>)}</select></label><label>Metode Pembayaran<select value={form.metode} onChange={e=>setForm({...form,metode:e.target.value})}><option>CASH</option><option>TRANSFER</option><option>QRIS</option><option>LAINNYA</option></select></label>
-      <label>Pihak Terkait<input value={form.pihakTerkait} onChange={e=>setForm({...form,pihakTerkait:e.target.value})} /></label><label>PIC Pencatat<input value={form.pic} onChange={e=>setForm({...form,pic:e.target.value})} /></label><label>No. Ref<input value={form.noRef} onChange={e=>setForm({...form,noRef:e.target.value})} /></label><label className="full">Catatan<textarea rows={3} value={form.catatan} onChange={e=>setForm({...form,catatan:e.target.value})} /></label></div>
+      <label>Pihak Terkait<input value={form.pihakTerkait} onChange={e=>setForm({...form,pihakTerkait:e.target.value})} /></label><label>PIC / Pemegang Dana
+        <select value={picOptions.includes(form.pic) ? form.pic : customPic ? "__CUSTOM__" : form.pic} onChange={e=>{
+          const value=e.target.value;
+          if(value==="__CUSTOM__"){ setCustomPic(""); setForm({...form,pic:""}); }
+          else { setCustomPic(""); setForm({...form,pic:value}); }
+        }} required>
+          <option value="">Pilih nama</option>
+          {picOptions.map(v=><option key={v} value={v}>{v}</option>)}
+          <option value="__CUSTOM__">+ Masukkan nama baru...</option>
+        </select>
+        {(!picOptions.includes(form.pic) || customPic) && <input className="custom-pic-input" value={customPic || form.pic} onChange={e=>{setCustomPic(e.target.value);setForm({...form,pic:e.target.value});}} placeholder="Masukkan nama PIC/pemegang dana" required />}
+      </label><label>No. Ref<input value={form.noRef} onChange={e=>setForm({...form,noRef:e.target.value})} /></label><label className="full">Catatan<textarea rows={3} value={form.catatan} onChange={e=>setForm({...form,catatan:e.target.value})} /></label></div>
       <div className="modal-actions"><button type="button" className="secondary" onClick={()=>setShowForm(false)}>Batal</button><button className="primary" disabled={saving}>{saving?"Menyimpan...":editingId?"Simpan Perubahan":"Simpan Transaksi"}</button></div>
     </form></div>}
   </main>;
