@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { COOKIE_NAME, isValidSessionToken } from "@/lib/auth";
 import {
   appendTransaction,
   deleteTransaction,
@@ -17,6 +18,11 @@ function clean(value: unknown) {
 function numberValue(value: unknown) {
   const n = Number(String(value ?? "").replace(/[^0-9.-]/g, ""));
   return Number.isFinite(n) ? n : 0;
+}
+
+function requireAdmin(request: Request) {
+  const token = request.headers.get("cookie")?.split(";").map(v => v.trim()).find(v => v.startsWith(COOKIE_NAME + "="))?.slice(COOKIE_NAME.length + 1);
+  try { return isValidSessionToken(token); } catch { return false; }
 }
 
 function errorResponse(message: string, status = 400) {
@@ -142,6 +148,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!requireAdmin(request)) return errorResponse("Akses pengurus diperlukan", 401);
   try {
     const body = await request.json() as Record<string, unknown>;
     const validation = validateBody(body);
@@ -178,6 +185,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  if (!requireAdmin(request)) return errorResponse("Akses pengurus diperlukan", 401);
   try {
     const body = await request.json() as Record<string, unknown>;
     const id = clean(body.id);
@@ -218,6 +226,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!requireAdmin(request)) return errorResponse("Akses pengurus diperlukan", 401);
   try {
     const body = await request.json() as Record<string, unknown>;
     const id = clean(body.id);
